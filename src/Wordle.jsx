@@ -1,25 +1,45 @@
-import React, { useState, useEffect, createRef, forwardRef, useImperativeHandle, useRef } from 'react';
+import React, { useState, useEffect, createRef, forwardRef, useImperativeHandle, useRef, memo } from 'react';
 import Styled from 'styled-components';
+
+const Gameboard = Styled.section`
+  width: 350px;
+  height: 420px;
+  display: grid;
+  grid-gap: 5px;
+  padding: 10px;
+  box-sizing: border-box;
+  grid-template-columns: repeat(5, 1fr);
+`
 
 const StyledInput = Styled.input`
   background-color: ${(props) => props.color()};
   color: white;
-  margin: 2px;
+  height: 4rem;
+  font-size: 62px;
+  max-width: 62px;
+  text-align: center;
+  caret-color: transparent;
+  border: none;
 `
-const l = (...props) => console.log(...props)
+
+const Box = Styled.div`
+  background-color: #121214;
+  height: 4rem;
+  max-width: 66px;
+  border: 2px solid #3A3A3D;
+`
 
 const ANSWER = ['P', 'H', 'A', 'S', 'E']
 const ROWS = 6;
 const COLUMNS = 5;
 
-const LAST_IN_COLUMN = 4;
-const FIRST_IN_COLUMN = 0;
+const LAST_COLUMN = 4;
+const LAST_ROW = 5;
 
 function Wordle() {
   const [references, setReferences] = useState(null)
   const [activeRow, setActiveRow] = useState(0)
   const [activeCol, setActiveCol] = useState(0)
-  // const [guesses, setGuesses] = useState([])
 
   useEffect(() => {
     const inputs = Array.from({ length: ROWS }).fill(null).map(() => 
@@ -29,16 +49,10 @@ function Wordle() {
   }, []);
 
   useEffect(() => {
-    if (references) references[activeRow][activeCol].current.focus()
-  }, [references]);
-
-  useEffect(() => {
-    // l('row, col', activeRow, activeCol)
     if (references) {
-      l(references[activeRow][activeCol].current)
       references[activeRow][activeCol].current.focus()
     }
-  }, [activeRow, activeCol]);
+  }, [activeRow, activeCol, references]);
 
   const handleUpdateColumn = (val, isDelete = false) => {
     if (isDelete) {
@@ -49,24 +63,34 @@ function Wordle() {
       // clear the last cell
       references[activeRow][newActiveCol + 1].current.reset()
     } else {
-      setActiveCol(oldVal => Math.min((oldVal + val), 4))
+      setActiveCol(oldVal => Math.min((oldVal + val), LAST_COLUMN))
     }
   }
 
   const handleIncrementLevel = (event) => {
-    //  l('active col', activeCol)
-    if (event.key !== 'Enter' || activeCol !== 4) return
-    l('increment', event.key)
+    if (event.key !== 'Enter' || activeCol !== LAST_COLUMN) return
+    if (activeRow === 5) {
+      alert('Game over, you are shit')
+      return
+    }
+
+    let correctAnswers = 0
 
     for (let i = 0; i < COLUMNS; i += 1) {
-      l(references[activeRow][i].current.value, ANSWER[i])
       if (references[activeRow][i].current.value === ANSWER[i]) {
         references[activeRow][i].current.handleSetCorrect();
+        correctAnswers += 1
       } 
       else if (ANSWER.includes(references[activeRow][i].current.value)) {
         references[activeRow][i].current.handleSetWrongOrder();
       }
     }
+
+    if (correctAnswers === LAST_ROW) {
+      alert('You guessed correctly, well done');
+      return;
+    }
+
     setActiveRow(prevRow => prevRow + 1)
     setActiveCol(0)
   }
@@ -76,41 +100,43 @@ function Wordle() {
     const cells = []
     for (let row = 0; row < ROWS; row += 1) {
       for (let col = 0; col < COLUMNS; col += 1) {
-        cells.push(
-          <Cell 
-            letter={ANSWER[col]} 
-            isDisabled={!(row === activeRow && col === activeCol)} 
-            ref={references[row][col]}
-            handleUpdateColumn={handleUpdateColumn}
-            references={references}
-            activeCol={activeCol}
-            activeRow={activeRow}
-          />
-        )        
+        if (activeRow < row) {
+          cells.push(<Box />)
+        } else {
+          cells.push(
+            <Cell
+              handleUpdateColumn={handleUpdateColumn}
+              isFirstCell={col === 0}
+              isDisabled={!(row === activeRow && col === activeCol)} 
+  
+              ref={references[row][col]}
+            />
+          )
+        }
+
       }
     }
     return cells;
   }
 
   return (
-    <section onKeyDown={handleIncrementLevel}>
+    <Gameboard onKeyDown={handleIncrementLevel}>
       {generateCells()}
-    </section>
+    </Gameboard>
   );
 }
 
 // eslint-disable-next-line react/display-name
-const Cell = forwardRef((props, ref) => {
+const Cell = memo(forwardRef(({ handleUpdateColumn, isFirstCell, isDisabled }, ref) => {
+  console.log('render')
   const inputRef = useRef(null);
   const [value, setValue] = useState('');
   const [wrongOrder, setWrongOrder] = useState(false);
   const [correct, setCorrect] = useState(false);
 
-
   const handleChange = (e) => {
-    // l('handleChange')
     setValue(e.target.value.toUpperCase());
-    props.handleUpdateColumn(1);
+    handleUpdateColumn(1);
   }
 
   const reset = () => setValue('')
@@ -119,22 +145,16 @@ const Cell = forwardRef((props, ref) => {
   const handleSetWrongOrder = () => setWrongOrder(true)
 
   const handleOnKeyDown = (event) => {
-    if (event.key === 'Backspace' && props.activeCol > FIRST_IN_COLUMN) {
-      // l('handleOnKeyDown')
-      props.handleUpdateColumn(-1, true);
+    if (event.key === 'Backspace' && !isFirstCell) {
+      handleUpdateColumn(-1, true);
     }
   }
 
   const getColor = () => {
-    let color = 'black'
-    if (correct) {
-      color = '#538D4E' 
-    }
-    else if (wrongOrder) {
-      color = '#B59F3B'
-    }
-
-    return color
+    if (correct) return '#538D4E' 
+    if (wrongOrder) return'#B59F3B'
+    
+    return '#3A3A3D'
   }
 
   useImperativeHandle(ref, () => ({
@@ -152,12 +172,12 @@ const Cell = forwardRef((props, ref) => {
       value={value} 
       onChange={handleChange} 
       ref={inputRef} 
-      disabled={props.isDisabled}
+      disabled={isDisabled}
       onKeyDown={handleOnKeyDown}
       maxLength="1"
       color={getColor}
     />
   )
-})
+}))
 
 export default Wordle
