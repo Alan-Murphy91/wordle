@@ -2,7 +2,7 @@
   "name": "wordle",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "index.jsx",
   "scripts": {
     "start": "webpack serve",
     "build": "NODE_ENV=production webpack",
@@ -15,13 +15,16 @@
   "license": "ISC",
   "dependencies": {
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "styled-components": "^6.0.7"
   },
   "devDependencies": {
     "@babel/core": "^7.22.10",
     "@babel/preset-env": "^7.22.10",
     "@babel/preset-react": "^7.22.5",
     "babel-loader": "^9.1.3",
+    "eslint": "^8.48.0",
+    "eslint-plugin-react": "^7.33.2",
     "html-webpack-plugin": "^5.5.3",
     "webpack": "^5.88.2",
     "webpack-bundle-analyzer": "^4.9.0",
