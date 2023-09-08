@@ -5,11 +5,8 @@ function App() {
   return (
     <>
       <header>
-        <p>Header</p>
       </header>
-      <section>
-        <Wordle />
-      </section>
+      <Wordle />
     </>
   );
 }
